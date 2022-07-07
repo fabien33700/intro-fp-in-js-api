@@ -1,0 +1,15 @@
+TODO Les boucles => map() / filter() / reduce()
+TODO Le temps présent => IO
+TODO Gestions d'erreur => Either Left / Right
+
+Idée Un import CSV, traitement et enregistrement dans une base de données
+
+Bonus Un front de consultation des données importées
+
+1. Partie backend ? API, route
+2. Parsing CSV
+3. Transformation
+  3a. Récupération de données auprès d'un API Tiers
+  3b. Autre traitement
+4. enregistrement
+5. Réponse
