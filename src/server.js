@@ -3,7 +3,7 @@
 import { createReadStream } from 'fs'
 import { rm, mkdir } from 'fs/promises'
 import { MongoClient } from 'mongodb'
-import { getPrice } from './priceApi.js'
+import { getPrice } from './priceApi'
 
 const EnergyEnum = Object.freeze({
   E: 'Electric',

@@ -11,9 +11,9 @@ import {
   clearDirectory,
   gracefulShutdown,
   closeServer
-} from './server.js'
+} from './server'
 
-import { appPort, mongoUrl, uploadDir } from './config.js'
+import { appPort, mongoUrl, uploadDir } from './config'
 
 
 // Initializing the application
