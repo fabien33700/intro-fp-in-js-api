@@ -37,7 +37,6 @@ app.post('/import', uploads.single('content'), async (req, res) => {
   const lines = await parseCSVFile(csvParser, file)
   const proceededLines = []
 
-
   for (const line of lines) {
     const newLine = await processLine(line)
     proceededLines.push(newLine)
