@@ -1,3 +1,4 @@
 brand,model,year,energy,engine,transmission,gearbox,power
-Tesla,Model S P85,2012,E,electric rear-motor,R,E1,500
-Ferrari,F8 Tributo,2019,F,3.9L V8 twin-turbo 90° 32V,R,DC7,530
+Tesla,Model S P85,2012,E,electric rear-motor,R,E,500
+Ferrari,F8 Tributo,2019,F,3.9L V8 twin-turbo 90° 32V,R,DC,530
+Peugeot,308 II,2013,G,1.6L 4 cyl. 16V,F,A,88

@@ -1,6 +1,5 @@
 import express from 'express'
 import multer from 'multer'
-import csv from 'csv-parser'
 
 import {
   checkFile,
@@ -8,23 +7,17 @@ import {
   getDatabase,
   processLine,
   saveLinesToDb,
-  clearDirectory,
-  gracefulShutdown,
-  closeServer
 } from './server.js'
 
 import { appPort, mongoUrl, uploadDir } from './config.js'
 
 // Initializing the application
 const app = express()
-const { client, db } = await getDatabase(mongoUrl)
-
-await clearDirectory(`./${uploadDir}`)
+const db = await getDatabase(mongoUrl)
 
 // Instanciation
-const csvParser = csv({ separator: ',' })
-const uploads = multer({ dest: uploadDir })
 
+const uploads = multer({ dest: uploadDir })
 
 // Routes
 app.post('/import', uploads.single('content'), async (req, res) => {
@@ -33,7 +26,7 @@ app.post('/import', uploads.single('content'), async (req, res) => {
   // throws an error
   checkFile(file)
 
-  const lines = await parseCSVFile(csvParser, file)
+  const lines = await parseCSVFile(file)
   const proceededLines = []
 
   for (const line of lines) {
@@ -48,11 +41,5 @@ app.post('/import', uploads.single('content'), async (req, res) => {
   res.status(200).json(proceededLines)
 })
 
-const server = app.listen(appPort)
+app.listen(appPort)
 console.log(`✔️  Application started, listening at port ${appPort}`)
-
-// Graceful shutdown handling
-await gracefulShutdown()
-await closeServer(server)
-await client.close()
-console.log(`✔️  Database connection closed`)
