@@ -3,7 +3,7 @@
 import { createReadStream } from 'fs'
 import { rm, mkdir } from 'fs/promises'
 import { MongoClient } from 'mongodb'
-import { getPrice } from './priceApi'
+import { getPrice } from './priceApi.js'
 
 const EnergyEnum = Object.freeze({
   E: 'Electric',
@@ -40,9 +40,11 @@ export function parseGearboxCode(gearboxCode) {
  * @throws {Error} the file cannot be processed
  */
 export function checkFile(file) {
-  if (file?.mimetype !== 'text/csv') {
+  if (!file)
+    throw new Error('No file received')
+
+  if (file.mimetype !== 'text/csv')
     throw new Error('Only accept csv files')
-  }
 }
 
 /**

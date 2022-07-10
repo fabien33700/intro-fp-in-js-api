@@ -11,10 +11,9 @@ import {
   clearDirectory,
   gracefulShutdown,
   closeServer
-} from './server'
+} from './server.js'
 
-import { appPort, mongoUrl, uploadDir } from './config'
-
+import { appPort, mongoUrl, uploadDir } from './config.js'
 
 // Initializing the application
 const app = express()
