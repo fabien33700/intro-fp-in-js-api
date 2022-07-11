@@ -1,5 +1,6 @@
 import express from 'express'
 import multer from 'multer'
+import * as R from 'ramda'
 
 import {
   checkFile,
@@ -23,23 +24,28 @@ const uploads = multer({ dest: uploadDir })
 app.post('/import', uploads.single('content'), async (req, res) => {
   const { file } = req
 
-  // throws an error
-  checkFile(file)
+  // // throws an error
+  // checkFile(file)
 
-  const lines = await parseCSVFile(file)
-  const proceededLines = []
+  const lines = await parseCSVFile(file.path)
+  await Promise.all(
+    lines.map(processLine)
+  )
+    .then(R.partial(saveLinesToDb, [db]))
+    .then(R.partial(writeResponse, [res]))
 
-  for (const line of lines) {
-    const newLine = await processLine(line)
-    proceededLines.push(newLine)
-  }
+
 
   // IO write
-  await saveLinesToDb(db, proceededLines)
+  // saveLinesToDb(db, processedLines)
 
   // writeResponse()
-  res.status(200).json(proceededLines)
+
 })
+
+function writeResponse(res, processedLines) {
+  res.status(200).json(processedLines)
+}
 
 app.listen(appPort)
 console.log(`✔️  Application started, listening at port ${appPort}`)

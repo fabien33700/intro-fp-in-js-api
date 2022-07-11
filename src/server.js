@@ -3,6 +3,7 @@
 import csv from 'csv-parser'
 import { createReadStream } from 'fs'
 import { MongoClient } from 'mongodb'
+import { parse } from 'path'
 
 const EnergyEnum = Object.freeze({
   E: 'Electric',
@@ -35,21 +36,21 @@ export function checkFile(file) {
  * Parse CSV file
  *
  * @param {object} csvParser the CSV parser instance 
- * @param {object} file the imported file descriptor
+ * @param {object} path the filepath
  * @returns {Promise<object[]>} each line of the CSV file in a key-value object format
  */
-export async function parseCSVFile(file) {
-  const csvParser = csv({ separator: ',' })
-  const parsedLines = []
+export async function parseCSVFile(path) {
+  const parseStream = createReadStream(`./${path}`).pipe(csv({ separator: ',' }))
+  const asyncIterator = parseStream[Symbol.asyncIterator]()
 
-  const { path } = file
-  const parseStream = createReadStream(`./${path}`).pipe(csvParser)
+  return walkAsyncIterator(asyncIterator)
+}
 
-  for await (const data of parseStream) {
-    parsedLines.push(data)
-  }
-
-  return parsedLines
+export function walkAsyncIterator(asyncIterator, acc = []) {
+  return asyncIterator.next().then(({ done, value }) => {
+    if (done) return acc
+    return walkAsyncIterator(asyncIterator, [...acc, value])
+  })
 }
 
 /**
@@ -58,16 +59,13 @@ export async function parseCSVFile(file) {
  * @param {object} line the line
  * @returns {Promise<object>} the processed line
  */
-export async function processLine(line) {
-  line.imported = new Date().toISOString()
-
-  // Energy code
-  line.energy = EnergyEnum[line.energy]
-
-  // Gearbox type code
-  line.gearbox = GearboxEnum[line.gearbox]
-
-  return line
+export function processLine(line) {
+  return { 
+    ...line,
+    imported: new Date().toISOString(), // Use immutable date
+    energy: EnergyEnum[line.energy],
+    gearbox: EnergyEnum[line.gearbox],
+  }
 }
 
 /**
@@ -79,6 +77,7 @@ export async function processLine(line) {
  */
 export async function saveLinesToDb(db, lines) {
   await db.collection('cars').insertMany(lines) 
+  return lines
 }
 
 
