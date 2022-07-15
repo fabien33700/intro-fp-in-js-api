@@ -3,7 +3,12 @@
 import csv from 'csv-parser'
 import { createReadStream } from 'fs'
 import { MongoClient } from 'mongodb'
-import { parse } from 'path'
+import { List } from 'immutable'
+
+// FP librairies
+import * as R from 'ramda'
+import S from 'sanctuary'
+import { safeProp } from './fp.js'
 
 const EnergyEnum = Object.freeze({
   E: 'Electric',
@@ -18,19 +23,27 @@ const GearboxEnum = Object.freeze({
   M: 'Manual',
 })
 
+const HttpError = (message, httpCode) => ({ message, httpCode })
+const BadRequest = R.partialRight(HttpError, [400])
+
+const isCsvFile = S.pipe([
+  safeProp('mimetype'), // Maybe String
+  S.maybe(false)(S.equals('text/csv')), // Boolean
+])
+
 /**
  * Check whether uoloaded file is acceptable
  *
  * @param {object} file imported file descriptor
  * @throws {Error} the file cannot be processed
  */
-export function checkFile(file) {
-  if (!file)
-    throw new Error('No file received')
-
-  if (file.mimetype !== 'text/csv')
-    throw new Error('Only accept csv files')
-}
+export const tryGetFilepath = S.pipe([
+  S.Just, // Maybe Object
+  S.chain (safeProp('file')), // Maybe Object
+  S.filter(isCsvFile), // Maybe Object
+  S.chain (safeProp('path')), // Maybe String
+  S.maybeToEither(BadRequest('Requires a valid CSV file')) // Either Error | String
+])
 
 /**
  * Parse CSV file
@@ -46,10 +59,10 @@ export async function parseCSVFile(path) {
   return walkAsyncIterator(asyncIterator)
 }
 
-export function walkAsyncIterator(asyncIterator, acc = []) {
+export function walkAsyncIterator(asyncIterator, acc = List()) {
   return asyncIterator.next().then(({ done, value }) => {
-    if (done) return acc
-    return walkAsyncIterator(asyncIterator, [...acc, value])
+    if (done) return acc.toJS()
+    return walkAsyncIterator(asyncIterator, acc.push(value))
   })
 }
 
@@ -64,7 +77,7 @@ export function processLine(line) {
     ...line,
     imported: new Date().toISOString(), // Use immutable date
     energy: EnergyEnum[line.energy],
-    gearbox: EnergyEnum[line.gearbox],
+    gearbox: GearboxEnum[line.gearbox],
   }
 }
 
@@ -75,10 +88,8 @@ export function processLine(line) {
  * @param {object[]} lines lines to save
  * @returns {Promise<void>} the save had finished
  */
-export async function saveLinesToDb(db, lines) {
-  await db.collection('cars').insertMany(lines) 
-  return lines
-}
+export const saveLines = (db, lines) => 
+  db.collection('cars').insertMany(lines).then(() => lines)
 
 
 /**
@@ -89,12 +100,13 @@ export async function saveLinesToDb(db, lines) {
  */
 export async function getDatabase(mongoUrl) {
   try {
-    const client = new MongoClient(mongoUrl);
+    const client = new MongoClient(mongoUrl, { useNewUrlParser: true });
     await client.connect()
     console.log(`✔️  MongoDb connection to '${mongoUrl}' OK`)
 
     return client.db()
   } catch (err) {
     console.error(`❌  Unable to connect to MongoDb at url '${mongoUrl}'`)
+    throw err
   }
 }
