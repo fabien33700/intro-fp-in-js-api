@@ -25,23 +25,36 @@ const GearboxEnum = Object.freeze({
 
 const HttpError = (message, httpCode) => ({ message, httpCode })
 const BadRequest = R.partialRight(HttpError, [400])
-
+/**
+ * Returns a predicate which check whether file MIME type represent a CSV File
+ * 
+ * @returns {(mimetype: string) => boolean} true if file mimetype is CSV, false otherwise
+ */
 const isCsvFile = S.pipe([
-  safeProp('mimetype'), // Maybe String
+  // |> String
+  safeProp('mimetype'),                 // Maybe String
   S.maybe(false)(S.equals('text/csv')), // Boolean
 ])
 
 /**
- * Check whether uoloaded file is acceptable
+ * An uploaded file descriptor
  *
- * @param {object} file imported file descriptor
- * @throws {Error} the file cannot be processed
+ * @typedef {object} File 
+ * @property {string} mimetype the file MIME type
+ * @property {string} path the path of the uploaded file * 
+ */
+
+/**
+ * Returns a function which try to get the imported file path
+ *
+ * @returns {(file: File) => Either<Error|String>} either the path or an error 
  */
 export const tryGetFilepath = S.pipe([
-  S.Just, // Maybe Object
-  S.chain (safeProp('file')), // Maybe Object
-  S.filter(isCsvFile), // Maybe Object
-  S.chain (safeProp('path')), // Maybe String
+  // |> File
+  S.Just,                       // Maybe Object
+  S.chain (safeProp('file')),   // Maybe Object
+  S.filter(isCsvFile),          // Maybe Object
+  S.chain (safeProp('path')),   // Maybe String
   S.maybeToEither(BadRequest('Requires a valid CSV file')) // Either Error | String
 ])
 

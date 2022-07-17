@@ -12,6 +12,12 @@ import {
   saveLines,
 } from './server.js'
 
+import {
+  writeErrorResponse,
+  writeJSONResponse,
+  writeResultResponse,
+} from './utils.js'
+
 import { appPort, mongoUrl, uploadDir } from './config.js'
 
 // FP librairies
@@ -34,32 +40,35 @@ app.post('/import', uploads.single('content'), async (req, res) => {
     ( tryGetFilepath(req) )
 })
 
-const writeResponse = (res, status, data) =>
-  res.status(status).json(data)
-
-const writeErrorResponse = res => R.pipe(
-  R.prop('message'),
-  R.objOf('message'),
-  R.partial(writeResponse, [res, 500])
-)
-
+/**
+ * Performs the import operation of the imported CSV file
+ *
+ * @param {string} filepath the imported filepath
+ * @param {Response} res the handler response object
+ */
 const importCSVOperation = (filepath, res) => {
   // Cut in smaller functions to make them easier to understand
   const processLines = R.map(processLine)
   const saveLinesToDb = R.partial(saveLines, [db])
+
   const errorLogAndWriteOnResponse = R.pipe(
     R.tap(console.error),
     writeErrorResponse(res)
   )
 
-  return F.encaseP(parseCSVFile)(filepath)
-    .pipe(F.map (processLines))
-    // IO write
+  const writeSuccessResult = res => 
+    R.partialObject(writeResultResponse(res), { status: 200 })
+  
+
+  F.encaseP(parseCSVFile)(filepath)
+    // Future object[]
+    .pipe(F.map (processLines))    
+    // IO write 
     .pipe(F.chain (F.encaseP ( saveLinesToDb )))
     // Result transform to API Response
     .pipe(F.fork 
-      ( errorLogAndWriteOnResponse )            // ❌ Error case
-      ( R.partial(writeResponse, [res, 200]) )  // ✔️ Success case 
+      ( errorLogAndWriteOnResponse )  // ❌ Error case
+      (  writeSuccessResult(res) )           // ✔️ Success case 
     )
 }
 
