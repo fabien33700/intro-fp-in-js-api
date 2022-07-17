@@ -3,12 +3,10 @@
 import csv from 'csv-parser'
 import { createReadStream } from 'fs'
 import { MongoClient } from 'mongodb'
-import { List } from 'immutable'
 
 // FP librairies
-import * as R from 'ramda'
 import S from 'sanctuary'
-import { safeProp } from './fp.js'
+import { safeProp, BadRequest, fromNodeStream } from './utils.js'
 
 const EnergyEnum = Object.freeze({
   E: 'Electric',
@@ -23,8 +21,6 @@ const GearboxEnum = Object.freeze({
   M: 'Manual',
 })
 
-const HttpError = (message, httpCode) => ({ message, httpCode })
-const BadRequest = R.partialRight(HttpError, [400])
 /**
  * Returns a predicate which check whether file MIME type represent a CSV File
  * 
@@ -63,20 +59,12 @@ export const tryGetFilepath = S.pipe([
  *
  * @param {object} csvParser the CSV parser instance 
  * @param {object} path the filepath
- * @returns {Promise<object[]>} each line of the CSV file in a key-value object format
+ * @returns {Future<object[]>} each line of the CSV file in a key-value object format
  */
-export async function parseCSVFile(path) {
-  const parseStream = createReadStream(`./${path}`).pipe(csv({ separator: ',' }))
-  const asyncIterator = parseStream[Symbol.asyncIterator]()
-
-  return walkAsyncIterator(asyncIterator)
-}
-
-export function walkAsyncIterator(asyncIterator, acc = List()) {
-  return asyncIterator.next().then(({ done, value }) => {
-    if (done) return acc.toJS()
-    return walkAsyncIterator(asyncIterator, acc.push(value))
-  })
+export function parseCSVFile(path) {
+  return fromNodeStream(
+    createReadStream(`./${path}`).pipe(csv({ separator: ',' }))
+  )
 }
 
 /**

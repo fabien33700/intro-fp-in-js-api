@@ -15,7 +15,6 @@ import {
 import {
   writeErrorResponse,
   writeJSONResponse,
-  writeResultResponse,
 } from './utils.js'
 
 import { appPort, mongoUrl, uploadDir } from './config.js'
@@ -56,19 +55,15 @@ const importCSVOperation = (filepath, res) => {
     writeErrorResponse(res)
   )
 
-  const writeSuccessResult = res => 
-    R.partialObject(writeResultResponse(res), { status: 200 })
-  
-
-  F.encaseP(parseCSVFile)(filepath)
+  parseCSVFile(filepath)
     // Future object[]
     .pipe(F.map (processLines))    
     // IO write 
     .pipe(F.chain (F.encaseP ( saveLinesToDb )))
     // Result transform to API Response
     .pipe(F.fork 
-      ( errorLogAndWriteOnResponse )  // ❌ Error case
-      (  writeSuccessResult(res) )           // ✔️ Success case 
+      ( errorLogAndWriteOnResponse  )  // ❌ Error case
+      ( writeJSONResponse(res, 200) )  // ✔️ Success case 
     )
 }
 
