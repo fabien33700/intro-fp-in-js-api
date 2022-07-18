@@ -30,7 +30,7 @@ export const writeErrorResponse = res => R.pipe(
   ([httpCode, message]) => writeTextResponse(res, httpCode, message),
 )
 
-export const safeProp = S.get(() => true)
+export const safeProp = S.get(R.always(true))
 
 export const HttpError = (message, httpCode) => ({ message, httpCode })
 export const BadRequest = R.partialRight(HttpError, [400])
@@ -48,3 +48,9 @@ export const fromNodeStream = stream => F.Future((reject, resolve) => {
     stream.removeListener('end', end)
   }
 })
+
+const consoleWrite = level => (...args) => _ => console?.[level](...args)
+export const consoleLog = consoleWrite('log')
+export const consoleInfo = consoleWrite('info')
+export const consoleWarn = consoleWrite('warn')
+export const consoleErr = consoleWrite('error')
