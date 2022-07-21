@@ -8,8 +8,10 @@ import { MongoClient } from 'mongodb'
 import * as R from 'ramda'
 import * as F from 'fluture'
 import S from 'sanctuary'
+
 import { safeProp, BadRequest, fromNodeStream, consoleLog, consoleErr } from './utils.js'
 
+/** Constants  */
 const EnergyEnum = Object.freeze({
   E: 'Electric',
   F: 'Fuel',
@@ -24,9 +26,8 @@ const GearboxEnum = Object.freeze({
 })
 
 /**
- * Returns a predicate which check whether file MIME type represent a CSV File
- * 
- * @returns {(mimetype: string) => boolean} true if file mimetype is CSV, false otherwise
+ * Returns a predicate which check whether file MIME type represents a CSV File or not
+ * @returns {(string) => boolean} true if file mimetype is CSV, false otherwise
  */
 const isCsvFile = S.pipe([
   // |> String
@@ -36,49 +37,53 @@ const isCsvFile = S.pipe([
 
 /**
  * An uploaded file descriptor
- *
  * @typedef {object} File 
  * @property {string} mimetype the file MIME type
- * @property {string} path the path of the uploaded file * 
+ * @property {string} path the path of the uploaded file
  */
 
 /**
- * Returns a function which try to get the imported file path
- *
- * @returns {(file: File) => Either<Error|String>} either the path or an error 
+ * Returns a function which try to get the imported file path from the request
+ * @returns {(file: File) => Either<HttpError, String>} either the path or an error 
  */
-export const tryGetFilepath = S.pipe([
-  // |> File
-  S.Just,                       // Maybe Object
-  S.chain(safeProp('file')),   // Maybe Object
-  S.filter(isCsvFile),          // Maybe Object
-  S.chain(safeProp('path')),   // Maybe String
-  S.maybeToEither(BadRequest('Requires a valid CSV file')) // Either Error | String
-])
+export const tryGetFilepath = 
+  // |> File  
+  S.pipe([
+    S.Just,                       // Maybe Object
+    S.chain(safeProp('file')),    // Maybe Object
+    S.filter(isCsvFile),          // Maybe Object
+    S.chain(safeProp('path')),    // Maybe String
+    S.maybeToEither(BadRequest('Requires a valid CSV file')) // Either HttpError | String
+  ])
 
+/**
+ * Prefix the given path with ./ to make it relative
+ * @param {string} path the filepath
+ * @returns {string} the relative filepath
+ */
 const relativePath = path => `./${path}`
 
 /**
  * Parse CSV file
- *
- * @param {object} csvParser the CSV parser instance 
- * @param {object} path the filepath
- * @returns {Future<object[]>} each line of the CSV file in a key-value object format
+ * @param {string} the relative path of the file to parse
+ * @returns {Future<Error, object[]>} each line of the CSV file in a key-value object format
  */
 export const parseCSVFile =
+  // |> String
   R.pipe(
-    relativePath,
-    createReadStream,
-    R.invoker(1, 'pipe')(csv({ separator: ',' })),
-    fromNodeStream,
+    relativePath,                 // String
+    createReadStream,             // ReadableStream
+    R.invoker
+      (1, 'pipe')
+      (csv({ separator: ',' })),  // ReadableStream
+    fromNodeStream,               // Future Error | object[]
   )
 
 
 /**
  * Process a line, aggregating additional information to it
- *
  * @param {object} line the line
- * @returns {Promise<object>} the processed line
+ * @returns {object} the processed line
  */
 export const processLine = line => ({
   ...line,
@@ -87,34 +92,48 @@ export const processLine = line => ({
   gearbox: GearboxEnum[line.gearbox],
 })
 
-// const getCollection = collectionName => db => db.collection(collectionName)
+/**
+ * Curried function that gets a collection from a Mongo db object
+ * @returns {(string) => (Db) => Collection} a function that returns a collection
+ */
 const getCollection = R.invoker(1, 'collection')
+// const getCollection = collectionName => db => db.collection(collectionName)
 
+/**
+ * Get the 'cars' collection
+ * @returns {(Db) => Collection} a function that returns a collection
+ */
 const getCarsCollection = getCollection('cars')
+
+/**
+ * Insert many items in a collection
+ * @param {Collection} collection a Mongo collection
+ * @returns {(object[]) => object} a function that insert items into the collection
+ */
 const insertMany = collection => data => collection.insertMany(data)
 
 /**
  * Save lines to database
- *
- * @param {object} db the MongoDb connection objecdbt
+ * @param {object} db the MongoDb connection object
  * @param {object[]} lines lines to save
- * @returns {Promise<void>} the save had finished
+ * @returns {Future<Error, object[]>} a future that will contain the lines that we added
  */
 export const saveLines = db => lines =>
   F.encaseP(
     R.pipe(
       getCarsCollection,
       insertMany
-    )(db)
+    )(db) // data => db.collection('cars').insertMany(data) 
   )(lines)
-    .pipe(F.map(R.always(lines)))
+    .pipe(
+      F.map( R.always(lines) ) 
+    ) // () => lines 
 
 
 /**
  * Get database object
- *
  * @param {string} mongoUrl the MongoDb connection url
- * @returns {Promise<object>} the MongoDb database access object
+ * @returns {Future<Error, Db>} a future that will contain the MongoDb database access object
  */
 export const getDatabase = mongoUrl => {
   const mongoClient = R.partialRight(R.construct(MongoClient), [{ useNewUrlParser: true }])
