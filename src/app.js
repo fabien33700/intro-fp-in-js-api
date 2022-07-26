@@ -16,7 +16,6 @@ const app = express()
 const db = await getDatabase(mongoUrl)
 
 // Instanciation
-
 const uploads = multer({ dest: uploadDir })
 
 // Routes

@@ -78,7 +78,8 @@ export async function processLine(line) {
  * @returns {Promise<void>} the save had finished
  */
 export async function saveLinesToDb(db, lines) {
-  await db.collection('cars').insertMany(lines) 
+  await db.collection('cars').insertMany(lines)
+  return lines
 }
 
 
