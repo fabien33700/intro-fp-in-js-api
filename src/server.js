@@ -18,17 +18,30 @@ const GearboxEnum = Object.freeze({
 })
 
 /**
+ * An Error with a HTTP status code
+ */
+class HttpError extends Error {
+  #httpCode
+
+  constructor(message, httpCode = 500) {
+    super(message)
+    this.#httpCode = httpCode
+  }
+
+  get httpCode() {
+    return this.#httpCode
+  }
+}
+
+/**
  * Check whether uoloaded file is acceptable
  *
  * @param {object} file imported file descriptor
  * @throws {Error} the file cannot be processed
  */
 export function checkFile(file) {
-  if (!file)
-    throw new Error('No file received')
-
-  if (file.mimetype !== 'text/csv')
-    throw new Error('Only accept csv files')
+  if (file?.mimetype !== 'text/csv')
+    throw new HttpError('Require a valid CSV file', 400)
 }
 
 /**
