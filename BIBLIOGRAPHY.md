@@ -30,6 +30,9 @@ https://opensource.com/article/17/6/functional-javascript
 - **Vidéo** : Apprentissage de la programmation fonctionnelle avec JavaScript - Anjana Vakil - JSUnconf :\
 https://www.youtube.com/watch?v=e-5obm1G_FY&ab_channel=JSConf
 
+- **Vidéo** : Immutable data structures for functional JS - Anjana Vakil - JSConf EU :\
+https://www.youtube.com/watch?v=Wo0qiGPSV-s&ab_channel=JSConf
+
 ## Exemples de la présentation
 
 * `maybe-example.js` (diapositive **23**) :\
