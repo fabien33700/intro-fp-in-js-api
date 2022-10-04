@@ -59,6 +59,7 @@ const runApp = db => {
 
     // Parse the CSV file
     parseCSVFile(filepath)
+    .pipe(F.map(R.tap(console.log)))
       // |> Future Error | object[]
       .pipe(F.map ( processLines ))    
       // IO write : save lines to db

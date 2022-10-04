@@ -7,6 +7,7 @@ import { MongoClient } from 'mongodb'
 // FP librairies
 import * as R from 'ramda'
 import * as F from 'fluture'
+import * as Fn from 'fluture-node'
 import S from 'sanctuary'
 
 import { safeProp, BadRequest, fromNodeStream, consoleLog, consoleErr } from './utils.js'
@@ -64,6 +65,13 @@ export const tryGetFilepath =
 const relativePath = path => `./${path}`
 
 /**
+ * Get a CSV Parser
+ * @param {ReadableStream} stream the readable stream
+ * @returns {ReadableStream} stream of parsed csv lines
+ */
+const pipeCSVParser = stream => stream.pipe(csv({ separator: ',' }))
+
+/**
  * Parse CSV file
  * @param {string} the relative path of the file to parse
  * @returns {Future<Error, object[]>} each line of the CSV file in a key-value object format
@@ -73,12 +81,9 @@ export const parseCSVFile =
   R.pipe(
     relativePath,                 // String
     createReadStream,             // ReadableStream
-    R.invoker
-      (1, 'pipe')
-      (csv({ separator: ',' })),  // ReadableStream
-    fromNodeStream,               // Future Error | object[]
+    pipeCSVParser,                // ReadableStream
+    Fn.buffer,                    // Future Error | object[]
   )
-
 
 /**
  * Process a line, aggregating additional information to it
@@ -129,24 +134,34 @@ export const saveLines = db => lines =>
       F.map( R.always(lines) ) 
     ) // () => lines 
 
+/**
+ * Connect a Mongo client
+ * @param {MongoClient} client the Mongo client
+ * @returns {Promise<MongoClient>} the connected client instance
+ */
+const mongoConnect = client => client.connect()
+
+/**
+ * Get a Db from the client
+ * @param {MongoClient} client the Mongo client
+ * @returns {Db} Mongo database instance
+ */
+const mongoGetDb = client => client.db()
 
 /**
  * Get database object
  * @param {string} mongoUrl the MongoDb connection url
  * @returns {Future<Error, Db>} a future that will contain the MongoDb database access object
  */
-export const getDatabase = mongoUrl => {
-  const mongoClient = R.partialRight(R.construct(MongoClient), [{ useNewUrlParser: true }])
-  const mongoConnect = R.invoker(0, 'connect')
-  const mongoGetDb = R.invoker(0, 'db')
 
-  return F.go(function* () {
-    const client = yield F.encase(mongoClient)(mongoUrl)
+export const getDatabase = mongoUrl =>
+  F.go(function* () {
+    const client = new MongoClient(mongoUrl)
     yield F.encaseP(mongoConnect)(client)
     return mongoGetDb(client)
   })
     .pipe(F.bimap
-      (R.tap(consoleErr(`❌  Unable to connect to MongoDb at url '${mongoUrl}'`)))
-      (R.tap(consoleLog(`✔️  MongoDb connection to '${mongoUrl}' OK`)))
+      ( R.tap( consoleErr(`❌  Unable to connect to MongoDb at url '${mongoUrl}'`) ))
+      ( R.tap( consoleLog(`✔️  MongoDb connection to '${mongoUrl}' OK`) ))
     )
-}
+
