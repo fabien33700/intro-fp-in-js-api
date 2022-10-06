@@ -1,11 +1,5 @@
 # Introduction à la programmation fonctionnelle en JavaScript
 
-Date : _26 juillet 2022_
-
-## Présentation 
-
-Lien de la présentation : https://docs.google.com/presentation/d/1wjZcvaS4CLfNfuKbHA7QSFL2NG0a6BwG
-
 ## Bibliographie
 
 - Une liste de liens très utiles pour la FP en JS : bibliothèques, outils, vidéos, articles, etc. :\
